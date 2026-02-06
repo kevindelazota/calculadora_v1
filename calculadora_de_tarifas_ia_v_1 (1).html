@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Calculadora de Tarifas IA - v1.3.1</title>
+
+  <!-- LIBRERÍAS DE EXPORTACIÓN (DEBEN CARGAR ANTES DEL SCRIPT PRINCIPAL) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.28/dist/jspdf.plugin.autotable.min.js"></script>
+
+  <style>
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #f5f7fa;
+      padding: 0;
+      margin: 0;
+    }
+
+    .page {
+      max-width: 1400px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    /* ===== BRANDING ===== */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 24px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #0a74c9, #005bb5);
+      color: #ffffff;
+      margin-bottom: 25px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand img {
+      height: 48px;
+    }
+
+    .brand-title {
+      line-height: 1.2;
+    }
+
+    .brand-title h1 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+
+    .brand-title span {
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn.excel { background: #16a34a; }
+    .btn.pdf { background: #dc2626; }
+    .btn.primary { background: #2563eb; }
+
+    .btn:hover { opacity: 0.9; }
+
+    h2 { color: #1f2937; margin-top: 35px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      background: #ffffff;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    th, td {
+      border: 1px solid #e5e7eb;
+      padding: 8px;
+      text-align: center;
+      font-size: 12px;
+    }
+
+    th {
+      background: #0f172a;
+      color: #ffffff;
+      font-weight: 500;
+    }
+
+    input, select {
+      padding: 6px;
+      width: 100%;
+      box-sizing: border-box;
+      font-size: 12px;
+    }
+
+    .summary {
+      font-size: 15px;
+      background: #f0f9ff;
+      padding: 20px;
+      border-radius: 10px;
+      border: 1px solid #bae6fd;
+      max-width: 520px;
+    }
+
+    .pct-input { width: 55px; }
+    .hrs-cell { background: #f8fafc; font-weight: bold; }
+</style>
+</head>
+
+<body>
+<div class="page">
+
+<div class="top-bar">
+  <div class="brand">
+    <img src="LOGO CON FONDO DEGRADADO.png" alt="Kevin De la Zota">
+    <div class="brand-title">
+      <h1>Calculadora de Tarifas – IA</h1>
+      <span>Kevin De la Zota · Consultor en Inteligencia Artificial</span>
+    </div>
+  </div>
+  <div class="actions">
+    <button class="btn excel" onclick="exportarExcel()">📊 Excel</button>
+    <button class="btn pdf" onclick="exportarPDF()">📄 PDF</button>
+  </div>
+</div>
+
+<h2>1. Tarifas Base (USD / hora)</h2>
+<table id="tarifasTable">
+  <tr><th>Rol</th><th>Nivel</th><th>Tarifa Hora</th></tr>
+  <tr><td>Dev</td><td>Junior 1</td><td><input value="20"></td></tr>
+  <tr><td>Dev</td><td>Junior 2</td><td><input value="28"></td></tr>
+  <tr><td>Dev</td><td>Senior 1</td><td><input value="40"></td></tr>
+  <tr><td>Dev</td><td>Senior 2</td><td><input value="55"></td></tr>
+  <tr><td>PM</td><td>Nivel 1</td><td><input value="35"></td></tr>
+  <tr><td>PM</td><td>Nivel 2</td><td><input value="50"></td></tr>
+  <tr><td>Analista de Negocio</td><td>Junior</td><td><input value="30"></td></tr>
+  <tr><td>Analista de Negocio</td><td>Senior</td><td><input value="45"></td></tr>
+  <tr><td>Director</td><td>Único</td><td><input value="80"></td></tr>
+</table>
+
+<h2>2. Parámetros del Proyecto</h2>
+<p>
+  Duración del Proyecto (semanas):
+  <input type="number" id="semanas" value="4" min="1" style="width:80px;" onchange="actualizarSemanas()">
+</p>
+
+<h2>3. Equipo del Proyecto – Dedicación Semanal</h2>
+<table id="equipoTable">
+  <thead id="equipoHead"></thead>
+  <tbody></tbody>
+</table>
+
+<button class="btn primary" onclick="agregarFila()">➕ Agregar Recurso</button>()">➕ Agregar Recurso</button>
+
+<h2>4. Resumen Económico</h2>
+<div class="summary">
+  <p>Costo Total Equipo: <strong>$ <span id="costoTotal">0</span></strong></p>
+  <p>Margen (%): <input type="number" id="margen" value="30" style="width:70px;" onchange="calcularTotales()"></p>
+  <p>Margen Empresa: <strong>$ <span id="margenMonto">0</span></strong></p>
+  <p><strong>Precio Final al Cliente: $ <span id="precioFinal">0</span></strong></p>
+</div>
+
+<script>
+const horasSemana = 40;
+
+const nivelesPorRol = {
+  "Dev": ["Junior 1", "Junior 2", "Senior 1", "Senior 2"],
+  "PM": ["Nivel 1", "Nivel 2"],
+  "Analista de Negocio": ["Junior", "Senior"],
+  "Director": ["Único"]
+};
+
+function obtenerTarifa(rol, nivel) {
+  const filas = document.querySelectorAll("#tarifasTable tr");
+  for (let i = 1; i < filas.length; i++) {
+    const c = filas[i].children;
+    if (c[0].innerText === rol && c[1].innerText === nivel) {
+      return parseFloat(c[2].children[0].value);
+    }
+  }
+  return 0;
+}
+
+function construirHeader() {
+  const semanas = parseInt(document.getElementById("semanas").value) || 0;
+  const head = document.getElementById("equipoHead");
+
+  let h = "<tr><th rowspan='2'>Rol</th><th rowspan='2'>Nivel</th>";
+  for (let i = 1; i <= semanas; i++) h += `<th colspan='2'>Semana ${i}</th>`;
+  h += "<th rowspan='2'>Horas Totales</th><th rowspan='2'>Subtotal</th><th rowspan='2'>Acción</th></tr><tr>";
+  for (let i = 1; i <= semanas; i++) h += "<th>%</th><th>Horas</th>";
+  h += "</tr>";
+
+  head.innerHTML = h;
+}
+
+function agregarFila() {
+  const tbody = document.querySelector("#equipoTable tbody");
+  const semanas = parseInt(document.getElementById("semanas").value);
+  const row = document.createElement("tr");
+
+  let html = `<td><select onchange="actualizarNiveles(this)">
+    <option>Dev</option><option>PM</option><option>Analista de Negocio</option><option>Director</option>
+  </select></td><td><select></select></td>`;
+
+  for (let i = 0; i < semanas; i++) {
+    html += `<td><input class="pct-input" type="number" value="0" min="0" max="100" onchange="calcularFila(this)"></td>`;
+    html += `<td class="hrs-cell">0</td>`;
+  }
+
+  html += `<td class="horas">0</td><td class="subtotal">0</td><td><button onclick="eliminarFila(this)">🗑</button></td>`;
+
+  row.innerHTML = html;
+  tbody.appendChild(row);
+  actualizarNiveles(row.children[0].children[0]);
+}
+
+function actualizarNiveles(selectRol) {
+  const row = selectRol.closest("tr");
+  const rol = selectRol.value;
+  const nivelSelect = row.children[1].children[0];
+  nivelSelect.innerHTML = "";
+  nivelesPorRol[rol].forEach(n => nivelSelect.add(new Option(n)));
+  calcularFila(nivelSelect);
+}
+
+function calcularFila(el) {
+  const row = el.closest("tr");
+  const rol = row.children[0].children[0].value;
+  const nivel = row.children[1].children[0].value;
+  const semanas = parseInt(document.getElementById("semanas").value);
+
+  let horasTotales = 0;
+  for (let i = 0; i < semanas; i++) {
+    const pct = parseFloat(row.children[2 + i * 2].children[0].value) || 0;
+    const horas = (pct / 100) * horasSemana;
+    row.children[3 + i * 2].innerText = horas.toFixed(1);
+    horasTotales += horas;
+  }
+
+  const subtotal = horasTotales * obtenerTarifa(rol, nivel);
+  row.querySelector(".horas").innerText = horasTotales.toFixed(1);
+  row.querySelector(".subtotal").innerText = subtotal.toFixed(2);
+  calcularTotales();
+}
+
+function eliminarFila(btn) {
+  btn.closest("tr").remove();
+  calcularTotales();
+}
+
+function calcularTotales() {
+  let total = 0;
+  document.querySelectorAll(".subtotal").forEach(e => total += parseFloat(e.innerText) || 0);
+  const m = parseFloat(document.getElementById("margen").value) || 0;
+  document.getElementById("costoTotal").innerText = total.toFixed(2);
+  document.getElementById("margenMonto").innerText = (total * m / 100).toFixed(2);
+  document.getElementById("precioFinal").innerText = (total * (1 + m / 100)).toFixed(2);
+}
+
+function actualizarSemanas() {
+  construirHeader();
+  document.querySelector("#equipoTable tbody").innerHTML = "";
+  calcularTotales();
+}
+
+function exportarExcel() {
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.table_to_sheet(document.getElementById("tarifasTable")), "Tarifas Base");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.table_to_sheet(document.getElementById("equipoTable")), "Equipo Proyecto");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
+    ["Costo Total", document.getElementById("costoTotal").innerText],
+    ["Margen %", document.getElementById("margen").value],
+    ["Margen $", document.getElementById("margenMonto").innerText],
+    ["Precio Final", document.getElementById("precioFinal").innerText]
+  ]), "Resumen");
+  XLSX.writeFile(wb, "Cotizacion_Proyecto_IA.xlsx");
+}
+
+function exportarPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: "landscape" });
+  doc.text("Cotización Proyecto IA", 14, 15);
+  doc.autoTable({ html: '#equipoTable', startY: 25, styles: { fontSize: 7 } });
+  doc.save("Cotizacion_Proyecto_IA.pdf");
+}
+
+construirHeader();
+</script>
+
+</div>
+</body>
+</html>
